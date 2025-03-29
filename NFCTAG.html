@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFC Randomizer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #282c34;
+            color: white;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .screen {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.5s ease-in-out;
+        }
+        .split-screen {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+        }
+        .option {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2em;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .option:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .left { background-color: #3498db; }
+        .right { background-color: #e74c3c; }
+        .full-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: #282c34;
+            z-index: 10;
+        }
+        .result {
+            font-size: 3em;
+            margin-top: 20px;
+        }
+        .btn {
+            padding: 10px 20px;
+            font-size: 1.2em;
+            margin-top: 20px;
+            cursor: pointer;
+            border: none;
+            background-color: #61dafb;
+            color: black;
+            border-radius: 10px;
+        }
+        .btn:hover {
+            background-color: #21a1f1;
+        }
+        .btn:active {
+            transform: scale(1.1);
+        }
+        .shaking {
+            animation: shake 0.5s ease-in-out infinite;
+        }
+        @keyframes shake {
+            0% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            100% { transform: translateX(-5px); }
+        }
+    </style>
+</head>
+<body>
+    <div id="splitScreen" class="split-screen">
+        <div class="option left" onclick="chooseGame('dice')">🎲 Roll Dice</div>
+        <div class="option right" onclick="chooseGame('8ball')">🎱 Magic 8 Ball</div>
+    </div>
+    
+    <div id="fullScreen" class="full-screen" style="display: none;">
+        <div id="gameTitle">Game Mode</div>
+        <div id="diceOptions" style="display: none;">
+            <button class="btn" onclick="setDice('d4')">D4</button>
+            <button class="btn" onclick="setDice('d6')">D6</button>
+            <button class="btn" onclick="setDice('d8')">D8</button>
+            <button class="btn" onclick="setDice('d10')">D10</button>
+            <button class="btn" onclick="setDice('d12')">D12</button>
+            <button class="btn" onclick="setDice('d20')">D20</button>
+        </div>
+        <div id="animate">🎱</div>
+        <div id="result" class="result">Shake to get answer...</div>
+        <button id="actionBtn" class="btn" onmousedown="startLongHold()" onmouseup="stopLongHold()" ontouchstart="startLongHold()" ontouchend="stopLongHold()">Hold to Shake</button>
+        <button class="btn" onclick="exitGame()">Exit</button>
+    </div>
+
+    <script>
+        let currentGame = "";
+        let currentDice = "d6";
+        let longHoldTimer = null;
+        let vibrationIntensity = 100; // Vibration intensity starts low
+        let resultGenerated = false;
+
+        function chooseGame(game) {
+            currentGame = game;
+            document.getElementById("splitScreen").style.display = "none";
+            document.getElementById("fullScreen").style.display = "flex";
+            document.getElementById("gameTitle").innerText = game === 'dice' ? "Choose Dice" : "Magic 8 Ball";
+            if (game === 'dice') {
+                document.getElementById("diceOptions").style.display = "flex";
+            } else {
+                document.getElementById("diceOptions").style.display = "none";
+                document.getElementById("animate").innerText = "🎱";
+                document.getElementById("result").innerText = "Shake to get answer...";  // Reset text for 8 ball
+            }
+        }
+
+        function setDice(dice) {
+            currentDice = dice;
+            document.getElementById("gameTitle").innerText = `Rolling ${dice.toUpperCase()}`;
+            document.getElementById("diceOptions").style.display = "none";
+            document.getElementById("animate").innerText = "🎲";
+        }
+
+        function startLongHold() {
+            // Reset the result and prevent it from showing before the user stops holding
+            resultGenerated = false;
+            document.getElementById("result").innerText = "Shake to get answer...";  // Display shaking message
+
+            // Start increasing vibration intensity every second
+            vibrationIntensity = 100;
+            longHoldTimer = setInterval(() => {
+                if (vibrationIntensity < 1000) {
+                    vibrationIntensity += 100; // Increase vibration every second
+                }
+                navigator.vibrate([vibrationIntensity]); // Vibrate with increasing intensity
+            }, 1000); // Increase intensity every second
+        }
+
+        function stopLongHold() {
+            // Stop the vibration and stop the interval
+            clearInterval(longHoldTimer);
+
+            // Generate the result and show it
+            generateResult();
+            resultGenerated = true;
+
+            // Reset the vibration after the user releases the button
+            navigator.vibrate(0); // Stop vibrating
+        }
+
+        function generateResult() {
+            if (resultGenerated) return; // Prevent generating the result multiple times
+
+            let options = [];
+            if (currentGame === "dice") {
+                if (currentDice === "d4") {
+                    options = ["1", "2", "3", "4"];
+                } else if (currentDice === "d6") {
+                    options = ["1", "2", "3", "4", "5", "6"];
+                } else if (currentDice === "d8") {
+                    options = ["1", "2", "3", "4", "5", "6", "7", "8"];
+                } else if (currentDice === "d10") {
+                    options = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
+                } else if (currentDice === "d12") {
+                    options = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
+                } else if (currentDice === "d20") {
+                    options = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20"];
+                }
+            } else if (currentGame === "8ball") {
+                options = ["Yes", "No", "Maybe", "Try again later", "Absolutely!", "Not a chance", "Definitely", "Ask again", "Unlikely", "Very likely"];
+            }
+
+            const randomIndex = Math.floor(Math.random() * options.length);
+            document.getElementById("result").innerText = options[randomIndex];
+
+            anime({
+                targets: "#animate",
+                rotate: '1turn',
+                scale: [1, 1.5, 1],
+                easing: 'easeInOutQuad',
+                duration: 1000
+            });
+        }
+
+        function exitGame() {
+            document.getElementById("splitScreen").style.display = "flex";
+            document.getElementById("fullScreen").style.display = "none";
+            document.getElementById("result").innerText = "Waiting...";
+        }
+
+        // Shake detection (using DeviceOrientationEvent)
+        if (window.DeviceMotionEvent) {
+            let shakeThreshold = 15;
+            let lastX, lastY, lastZ;
+            let shakeCount = 0;
+
+            window.addEventListener("devicemotion", function (e) {
+                let acceleration = e.accelerationIncludingGravity;
+                let diffX = acceleration.x - lastX;
+                let diffY = acceleration.y - lastY;
+                let diffZ = acceleration.z - lastZ;
+
+                let distance = Math.sqrt(diffX * diffX + diffY * diffY + diffZ * diffZ);
+
+                if (distance > shakeThreshold) {
+                    if (shakeCount === 0) {
+                        generateResult();
+                        document.getElementById("actionBtn").classList.add("shaking");
+                        navigator.vibrate([200]); // Vibrate the phone
+                    }
+                    shakeCount++;
+                } else {
+                    shakeCount = 0;
+                }
+
+                lastX = acceleration.x;
+                lastY = acceleration.y;
+                lastZ = acceleration.z;
+            });
+        }
+    </script>
+</body>
+</html>
